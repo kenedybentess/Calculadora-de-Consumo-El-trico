@@ -9,13 +9,13 @@
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     * { font-family: 'Inter', sans-serif; }
- .input-group:focus-within label { color: #4f46e5; }
- .result-card { transition: all 0.3s ease; }
- .result-card:hover { transform: translateY(-2px); }
+.input-group:focus-within label { color: #4f46e5; }
+.result-card { transition: all 0.3s ease; }
+.result-card:hover { transform: translateY(-2px); }
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
- .tab-active { background: #4f46e5; color: white; }
+.tab-active { background: #4f46e5; color: white; }
 </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen">
@@ -112,7 +112,7 @@
                                 <div class="grid grid-cols-3 gap-3">
                                     <div>
                                         <label class="text-xs text-slate-600 mb-1 block">Fase R</label>
-                                        <input type="number" id="tensaoR" step="0.1" min="0" placeholder="220" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
+                                        <input type="number" id="tensaoR" step="0.1" min="0" placeholder="220" class="w-full px-3 py-2.5 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
                                     </div>
                                     <div>
                                         <label class="text-xs text-slate-600 mb-1 block">Fase S</label>
@@ -228,9 +228,14 @@
                             Setores e Equipamentos
                             <span id="contadorRegistros" class="text-sm font-normal text-slate-500"></span>
                         </h2>
-                        <button onclick="limparTudo()" class="text-sm text-red-600 hover:text-red-700 font-medium">
-                            <i class="fa-solid fa-trash mr-1"></i>Limpar Tudo
-                        </button>
+                        <div class="flex gap-2">
+                            <button onclick="exportarCSV()" class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2 rounded-lg transition-all">
+                                <i class="fa-solid fa-file-csv mr-1"></i>Exportar CSV
+                            </button>
+                            <button onclick="limparTudo()" class="text-sm text-red-600 hover:text-red-700 font-medium px-4 py-2 rounded-lg border border-red-200 hover:bg-red-50 transition-all">
+                                <i class="fa-solid fa-trash mr-1"></i>Limpar Tudo
+                            </button>
+                        </div>
                     </div>
                     <div id="listaSetores" class="space-y-4">
                         <div class="text-center py-12 text-slate-400">
@@ -245,8 +250,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase, ref, set, push, onValue, remove, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-        import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
+        import { getDatabase, ref, set, push, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDPbv52pQFVfsPpTXpErgkj9Q4QMemuI0Y",
@@ -260,7 +264,6 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
         const db = getDatabase(app);
         const setoresRef = ref(db, 'setores');
 
@@ -589,6 +592,40 @@
             document.getElementById('totalDiario').textContent = formatarKwh(totalDiario);
             document.getElementById('totalMensal').textContent = formatarKwh(totalMensal);
             document.getElementById('totalAnual').textContent = formatarKwh(totalMensal * 12);
+        }
+
+        window.exportarCSV = function() {
+            let csv = 'Setor,Equipamento,Potencia_W,Horas_Dia,Dias_Mes,Consumo_Diario_kWh,Consumo_Mensal_kWh\n';
+            let totalEquip = 0;
+
+            setores.forEach(setor => {
+                const equipFiltrados = filtrarEquipamentos(setor);
+                equipFiltrados.forEach(eq => {
+                    csv += `"${setor.nome}","${eq.nome}",${eq.potencia},${eq.horasDia},${eq.diasMes},${eq.consumoDiario.toFixed(2)},${eq.consumoMensal.toFixed(2)}\n`;
+                    totalEquip++;
+                });
+            });
+
+            if (totalEquip === 0) {
+                alert('Nenhum equipamento para exportar. Ajuste os filtros.');
+                return;
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+
+            const dataHoje = new Date().toISOString().slice(0,10);
+            const nomeArquivo = filtroAtivo.setor === 'todos'?
+                `consumo-geral-${dataHoje}.csv` :
+                `consumo-${setores.find(s => s.id == filtroAtivo.setor)?.nome.replace(/\s+/g,'_')}-${dataHoje}.csv`;
+
+            link.setAttribute('download', nomeArquivo);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         window.limparTudo = async function() {
