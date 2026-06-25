@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gestão de Consumo por Setor</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -223,23 +222,6 @@
                     </div>
                 </div>
 
-                <!-- Gráfico Mensal Total -->
-                <div id="graficoCard" class="hidden bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-column text-indigo-600"></i>
-                            <span id="tituloGrafico">Consumo Total Mês a Mês</span>
-                        </h3>
-                        <button onclick="downloadGrafico()" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                            <i class="fa-solid fa-download mr-1"></i>Baixar PNG
-                        </button>
-                    </div>
-                    <div class="relative h-[300px]">
-                        <canvas id="graficoMensal"></canvas>
-                    </div>
-                    <p class="text-xs text-slate-500 mt-3 text-center">Baseado no filtro atual</p>
-                </div>
-
                 <!-- Lista de Setores -->
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
                     <div class="flex items-center justify-between mb-6">
@@ -266,7 +248,6 @@
     <script>
         let setores = [];
         let currentTab = 'potencia';
-        let chartInstance = null;
         let filtroAtivo = { setor: 'todos', busca: '' };
 
         function switchTab(tab) {
@@ -579,82 +560,6 @@
             document.getElementById('totalDiario').textContent = formatarKwh(totalDiario);
             document.getElementById('totalMensal').textContent = formatarKwh(totalMensal);
             document.getElementById('totalAnual').textContent = formatarKwh(totalMensal * 12);
-
-            if (totalDiario > 0) {
-                gerarGraficoTotal(totalDiario);
-                document.getElementById('tituloGrafico').textContent = titulo + ' - Mês a Mês';
-            } else {
-                document.getElementById('graficoCard').classList.add('hidden');
-                if (chartInstance) {
-                    chartInstance.destroy();
-                    chartInstance = null;
-                }
-            }
-        }
-
-        function gerarGraficoTotal(consumoDiarioTotal) {
-            const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-            const diasNoMes = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-            const dadosMensais = diasNoMes.map(dias => parseFloat((consumoDiarioTotal * dias).toFixed(2)));
-
-            const canvas = document.getElementById('graficoMensal');
-            const ctx = canvas.getContext('2d');
-
-            if (chartInstance) {
-                chartInstance.destroy();
-                chartInstance = null;
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            chartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: meses,
-                    datasets: [{
-                        label: 'Consumo Total kWh',
-                        data: dadosMensais,
-                        backgroundColor: 'rgba(79, 70, 229, 0.8)',
-                        borderColor: 'rgba(79, 70, 229, 1)',
-                        borderWidth: 1,
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return 'Total: ' + context.parsed.y.toFixed(2) + ' kWh';
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString('pt-BR') + ' kWh';
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-
-            document.getElementById('graficoCard').classList.remove('hidden');
-        }
-
-        function downloadGrafico() {
-            const link = document.createElement('a');
-            link.download = 'grafico-consumo-total-mensal.png';
-            link.href = document.getElementById('graficoMensal').toDataURL();
-            link.click();
         }
 
         function limparTudo() {
