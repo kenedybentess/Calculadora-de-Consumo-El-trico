@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Consumo Elétrico</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .input-group:focus-within label {
+        color: #4f46e5;
+    }
+    
+    .result-card {
+        transition: all 0.3s ease;
+    }
+    
+    .result-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+    
+    .tab-active {
+        background: #4f46e5;
+        color: white;
+    }
+    
+    .animate-pulse-slow {
+        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .5; }
+    }
+</style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white mb-4 shadow-lg shadow-indigo-200">
+                <i class="fa-solid fa-bolt text-2xl"></i>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Calculadora de Consumo Elétrico</h1>
+            <p class="text-slate-600 max-w-2xl mx-auto">Calcule o consumo de energia do seu equipamento em kWh com base na potência e tempo de uso</p>
+        </header>
+
+        <div class="grid lg:grid-cols-5 gap-6">
+            <!-- Input Section -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-indigo-600"></i>
+                        Dados do Equipamento
+                    </h2>
+
+                    <!-- Tabs -->
+                    <div class="flex p-1 bg-slate-100 rounded-xl mb-6">
+                        <button id="tabPotencia" onclick="switchTab('potencia')" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all tab-active">
+                            Modo Simples
+                        </button>
+                        <button id="tabTensao" onclick="switchTab('tensao')" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all text-slate-600">
+                            Modo Avançado
+                        </button>
+                    </div>
+
+                    <form id="calcForm" class="space-y-5">
+                        <!-- Potência Tab -->
+                        <div id="potenciaInputs">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
+                                    Potência do Equipamento
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="potencia" step="0.01" min="0" placeholder="Ex: 1500" 
+                                        class="w-full pl-4 pr-16 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                    <span class="absolute right-4 top-3 text-slate-500 font-medium">W</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">Verifique na etiqueta do equipamento</p>
+                            </div>
+                        </div>
+
+                        <!-- Tensão/Corrente Tab -->
+                        <div id="tensaoInputs" class="hidden space-y-5">
+                            <div class="input-group">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Sistema Elétrico</label>
+                                <select id="sistema" onchange="updateFormula()"
+                                    class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                    <option value="monofasico">Monofásico: P = V × I × cos φ</option>
+                                    <option value="trifasico">Trifásico: P = √3 × V × I × cos φ</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="input-group">
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Tensão</label>
+                                    <div class="relative">
+                                        <input type="number" id="tensao" step="0.1" min="0" placeholder="220" 
+                                            class="w-full pl-4 pr-10 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                        <span class="absolute right-4 top-3 text-slate-500 font-medium">V</span>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">Corrente</label>
+                                    <div class="relative">
+                                        <input type="number" id="corrente" step="0.01" min="0" placeholder="6.8" 
+                                            class="w-full pl-4 pr-10 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                        <span class="absolute right-4 top-3 text-slate-500 font-medium">A</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
+                                    Fator de Potência (cos φ)
+                                    <i class="fa-regular fa-circle-question text-slate-400 ml-1" title="Para cargas resistivas como chuveiro use 1.0. Para motores use 0.8"></i>
+                                </label>
+                                <input type="range" id="fp" min="0.1" max="1" step="0.05" value="0.92" 
+                                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                                <div class="flex justify-between text-xs text-slate-500 mt-1">
+                                    <span>0.1</span>
+                                    <span id="fpValue" class="font-semibold text-indigo-600">0.92</span>
+                                    <span>1.0</span>
+                                </div>
+                            </div>
+
+                            <div id="potenciaCalculada" class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-center">
+                                <p class="text-sm text-indigo-700">Potência Calculada</p>
+                                <p class="text-2xl font-bold text-indigo-600"><span id="potenciaCalcValue">0</span> W</p>
+                            </div>
+                        </div>
+
+                        <!-- Common Inputs -->
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Tempo de Uso por Dia</label>
+                            <div class="relative">
+                                <input type="number" id="horasDia" step="0.1" min="0" max="24" placeholder="Ex: 4" 
+                                    class="w-full pl-4 pr-16 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                <span class="absolute right-4 top-3 text-slate-500 font-medium">horas</span>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Dias de Uso no Mês</label>
+                            <div class="relative">
+                                <input type="number" id="diasMes" step="1" min="0" max="31" placeholder="Ex: 30" value="30"
+                                    class="w-full pl-4 pr-16 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                                <span class="absolute right-4 top-3 text-slate-500 font-medium">dias</span>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 pt-2">
+                            <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
+                                <i class="fa-solid fa-calculator mr-2"></i>Calcular
+                            </button>
+                            <button type="button" onclick="limpar()" class="px-6 py-3.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium rounded-xl transition-all">
+                                <i class="fa-solid fa-eraser"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Main Results -->
+                <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
+                    <h2 class="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-indigo-600"></i>
+                        Resultados
+                    </h2>
+                    
+                    <div id="resultadoVazio" class="text-center py-12">
+                        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center animate-pulse-slow">
+                            <i class="fa-solid fa-plug text-3xl text-slate-400"></i>
+                        </div>
+                        <p class="text-slate-500">Preencha os dados e clique em calcular</p>
+                    </div>
+
+                    <div id="resultados" class="hidden space-y-4">
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="result-card bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-5">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-sm font-medium text-blue-700">Consumo Diário</p>
+                                    <i class="fa-solid fa-sun text-blue-500"></i>
+                                </div>
+                                <p class="text-3xl font-bold text-blue-600"><span id="consumoDiario">0</span> kWh</p>
+                                <p class="text-xs text-blue-600/70 mt-1">Por dia de uso</p>
+                            </div>
+                            
+                            <div class="result-card bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-xl p-5">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-sm font-medium text-indigo-700">Consumo Mensal</p>
+                                    <i class="fa-solid fa-calendar text-indigo-500"></i>
+                                </div>
+                                <p class="text-3xl font-bold text-indigo-600"><span id="consumoMensal">0</span> kWh</p>
+                                <p class="text-xs text-indigo-600/70 mt-1">Total no mês</p>
+                            </div>
+                        </div>
+
+                        <div class="result-card bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-100 rounded-xl p-5">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-sm font-medium text-emerald-700">Consumo Anual Estimado</p>
+                                <i class="fa-solid fa-chart-line text-emerald-500"></i>
+                            </div>
+                            <p class="text-3xl font-bold text-emerald-600"><span id="consumoAnual">0</span> kWh</p>
+                            <p class="text-xs text-emerald-600/70 mt-1">Considerando 12 meses iguais</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- How it works -->
+                <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb text-yellow-500"></i>
+                        Como o cálculo é feito?
+                    </h3>
+                    
+                    <div class="space-y-4 text-sm text-slate-600">
+                        <div class="bg-slate-50 rounded-lg p-4 border border-slate-100">
+                            <p class="font-semibold text-slate-700 mb-2">Consumo em kWh</p>
+                            <code class="block bg-slate-800 text-green-400 px-3 py-2 rounded text-xs mb-2">
+                                Consumo = (Potência em W × Horas × Dias) ÷ 1000
+                            </code>
+                            <p>Dividimos por 1000 para converter Watts para quilowatt-hora (kWh), que é a unidade usada nas contas de energia.</p>
+                        </div>
+
+                        <div id="formulaExtra" class="hidden bg-slate-50 rounded-lg p-4 border border-slate-100">
+                            <p class="font-semibold text-slate-700 mb-2">Cálculo da Potência - Modo Avançado</p>
+                            <div id="formulaMonofasico">
+                                <p class="text-xs text-slate-500 mb-1">Sistema Monofásico:</p>
+                                <code class="block bg-slate-800 text-green-400 px-3 py-2 rounded text-xs">
+                                    P = V × I × cos φ
+                                </code>
+                            </div>
+                            <div id="formulaTrifasico" class="hidden mt-2">
+                                <p class="text-xs text-slate-500 mb-1">Sistema Trifásico:</p>
+                                <code class="block bg-slate-800 text-green-400 px-3 py-2 rounded text-xs">
+                                    P = √3 × V × I × cos φ
+                                </code>
+                            </div>
+                            <p class="text-xs mt-2">Onde V é tensão, I é corrente e cos φ é o fator de potência.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-xl shadow-indigo-200/50 p-6 text-white">
+                    <h3 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-leaf"></i>
+                        Dica para economizar energia
+                    </h3>
+                    <p class="text-indigo-100 text-sm leading-relaxed">
+                        Equipamentos com selo Procel A consomem até 40% menos energia. Desligue aparelhos da tomada quando não estiver usando para evitar consumo em stand-by. Use timers e sensores de presença quando possível.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-sm text-slate-500">
+            <p>Os valores são estimativas. O consumo real pode variar conforme o uso e eficiência do equipamento.</p>
+        </footer>
+    </div>
+
+    <script>
+        let currentTab = 'potencia';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            const tabPotencia = document.getElementById('tabPotencia');
+            const tabTensao = document.getElementById('tabTensao');
+            const potenciaInputs = document.getElementById('potenciaInputs');
+            const tensaoInputs = document.getElementById('tensaoInputs');
+            const formulaExtra = document.getElementById('formulaExtra');
+
+            if (tab === 'potencia') {
+                tabPotencia.classList.add('tab-active');
+                tabPotencia.classList.remove('text-slate-600');
+                tabTensao.classList.remove('tab-active');
+                tabTensao.classList.add('text-slate-600');
+                potenciaInputs.classList.remove('hidden');
+                tensaoInputs.classList.add('hidden');
+                formulaExtra.classList.add('hidden');
+            } else {
+                tabTensao.classList.add('tab-active');
+                tabTensao.classList.remove('text-slate-600');
+                tabPotencia.classList.remove('tab-active');
+                tabPotencia.classList.add('text-slate-600');
+                tensaoInputs.classList.remove('hidden');
+                potenciaInputs.classList.add('hidden');
+                formulaExtra.classList.remove('hidden');
+                updateFormula();
+            }
+        }
+
+        function updateFormula() {
+            const sistema = document.getElementById('sistema').value;
+            document.getElementById('formulaMonofasico').classList.toggle('hidden', sistema !== 'monofasico');
+            document.getElementById('formulaTrifasico').classList.toggle('hidden', sistema !== 'trifasico');
+            calcularPotenciaTempo();
+        }
+
+        document.getElementById('fp').addEventListener('input', function(e) {
+            document.getElementById('fpValue').textContent = parseFloat(e.target.value).toFixed(2);
+            calcularPotenciaTempo();
+        });
+
+        ['tensao', 'corrente', 'sistema'].forEach(id => {
+            document.getElementById(id).addEventListener('input', calcularPotenciaTempo);
+        });
+
+        function calcularPotenciaTempo() {
+            const tensao = parseFloat(document.getElementById('tensao').value) || 0;
+            const corrente = parseFloat(document.getElementById('corrente').value) || 0;
+            const fp = parseFloat(document.getElementById('fp').value) || 0;
+            const sistema = document.getElementById('sistema').value;
+
+            let potencia = 0;
+            if (sistema === 'monofasico') {
+                potencia = tensao * corrente * fp;
+            } else {
+                potencia = Math.sqrt(3) * tensao * corrente * fp;
+            }
+
+            document.getElementById('potenciaCalcValue').textContent = potencia.toFixed(0);
+            return potencia;
+        }
+
+        function validarInputs() {
+            const horasDia = parseFloat(document.getElementById('horasDia').value);
+            const diasMes = parseFloat(document.getElementById('diasMes').value);
+
+            if (currentTab === 'potencia') {
+                const potencia = parseFloat(document.getElementById('potencia').value);
+                if (!potencia || potencia <= 0) {
+                    alert('Por favor, insira uma potência válida maior que zero.');
+                    return false;
+                }
+            } else {
+                const tensao = parseFloat(document.getElementById('tensao').value);
+                const corrente = parseFloat(document.getElementById('corrente').value);
+                if (!tensao || tensao <= 0) {
+                    alert('Por favor, insira uma tensão válida maior que zero.');
+                    return false;
+                }
+                if (!corrente || corrente <= 0) {
+                    alert('Por favor, insira uma corrente válida maior que zero.');
+                    return false;
+                }
+            }
+
+            if (!horasDia || horasDia <= 0 || horasDia > 24) {
+                alert('Por favor, insira um valor de horas por dia entre 0 e 24.');
+                return false;
+            }
+
+            if (!diasMes || diasMes <= 0 || diasMes > 31) {
+                alert('Por favor, insira um número de dias entre 1 e 31.');
+                return false;
+            }
+
+            return true;
+        }
+
+        function formatarKwh(valor) {
+            return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        document.getElementById('calcForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!validarInputs()) return;
+
+            let potencia;
+            if (currentTab === 'potencia') {
+                potencia = parseFloat(document.getElementById('potencia').value);
+            } else {
+                potencia = calcularPotenciaTempo();
+            }
+
+            const horasDia = parseFloat(document.getElementById('horasDia').value);
+            const diasMes = parseFloat(document.getElementById('diasMes').value);
+
+            // Consumo kWh = (Potência W * horas * dias) / 1000
+            const consumoDiario = (potencia * horasDia) / 1000;
+            const consumoMensal = (potencia * horasDia * diasMes) / 1000;
+            const consumoAnual = consumoMensal * 12;
+
+            // Exibir resultados
+            document.getElementById('resultadoVazio').classList.add('hidden');
+            document.getElementById('resultados').classList.remove('hidden');
+            
+            document.getElementById('consumoDiario').textContent = formatarKwh(consumoDiario);
+            document.getElementById('consumoMensal').textContent = formatarKwh(consumoMensal);
+            document.getElementById('consumoAnual').textContent = formatarKwh(consumoAnual);
+
+            // Scroll suave para resultados no mobile
+            if (window.innerWidth < 1024) {
+                document.getElementById('resultados').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+
+        function limpar() {
+            document.getElementById('calcForm').reset();
+            document.getElementById('diasMes').value = '30';
+            document.getElementById('fp').value = '0.92';
+            document.getElementById('fpValue').textContent = '0.92';
+            document.getElementById('potenciaCalcValue').textContent = '0';
+            document.getElementById('resultadoVazio').classList.remove('hidden');
+            document.getElementById('resultados').classList.add('hidden');
+        }
+    </script>
+<script>(function(){document.addEventListener("click",function(e){var a=e.target.closest("[data-product-id]");if(!a)return;e.preventDefault();var pid=a.getAttribute("data-product-id");if(pid)parent.postMessage({type:"ecto-artifact-link-click",productId:pid},"*")})})();</script>
+</body>
+</html>
