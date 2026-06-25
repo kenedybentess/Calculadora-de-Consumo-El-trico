@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestão de Consumo por Setor</title>
+<title>Gestão de Consumo por Setor - Firebase</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     * { font-family: 'Inter', sans-serif; }
-   .input-group:focus-within label { color: #4f46e5; }
-   .result-card { transition: all 0.3s ease; }
-   .result-card:hover { transform: translateY(-2px); }
+ .input-group:focus-within label { color: #4f46e5; }
+ .result-card { transition: all 0.3s ease; }
+ .result-card:hover { transform: translateY(-2px); }
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
-   .tab-active { background: #4f46e5; color: white; }
+ .tab-active { background: #4f46e5; color: white; }
 </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen">
@@ -25,13 +25,15 @@
                 <i class="fa-solid fa-industry text-2xl"></i>
             </div>
             <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">Gestão de Consumo por Setor</h1>
-            <p class="text-slate-600 max-w-2xl mx-auto">Cadastre setores e equipamentos para calcular o consumo total em kWh</p>
+            <p class="text-slate-600 max-w-2xl mx-auto">Sincronizado com Firebase Realtime Database</p>
+            <div id="statusConexao" class="mt-3 inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Conectando...
+            </div>
         </header>
 
         <div class="grid lg:grid-cols-5 gap-6">
             <!-- COLUNA 1: CADASTRO -->
             <div class="lg:col-span-2 space-y-6">
-                <!-- Cadastrar Setor -->
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
                     <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-folder-plus text-indigo-600"></i>
@@ -46,7 +48,6 @@
                     </div>
                 </div>
 
-                <!-- Cadastrar Equipamento -->
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
                     <h2 class="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
                         <i class="fa-solid fa-plug-circle-plus text-indigo-600"></i>
@@ -176,7 +177,6 @@
 
             <!-- COLUNA 2: LISTA E TOTAIS -->
             <div class="lg:col-span-3 space-y-6">
-                <!-- FILTRO -->
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
                     <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                         <i class="fa-solid fa-filter text-indigo-600"></i>
@@ -200,7 +200,6 @@
                     </div>
                 </div>
 
-                <!-- Totais Gerais -->
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
                     <h2 class="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
                         <i class="fa-solid fa-chart-pie text-indigo-600"></i>
@@ -222,7 +221,6 @@
                     </div>
                 </div>
 
-                <!-- Lista de Setores -->
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-xl font-semibold text-slate-800 flex items-center gap-2">
@@ -237,7 +235,7 @@
                     <div id="listaSetores" class="space-y-4">
                         <div class="text-center py-12 text-slate-400">
                             <i class="fa-solid fa-inbox text-4xl mb-3"></i>
-                            <p>Nenhum setor cadastrado ainda</p>
+                            <p>Carregando dados...</p>
                         </div>
                     </div>
                 </div>
@@ -245,12 +243,59 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, push, onValue, remove, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPbv52pQFVfsPpTXpErgkj9Q4QMemuI0Y",
+            authDomain: "consumo-eletrico-5f60d.firebaseapp.com",
+            databaseURL: "https://consumo-eletrico-5f60d-default-rtdb.firebaseio.com",
+            projectId: "consumo-eletrico-5f60d",
+            storageBucket: "consumo-eletrico-5f60d.firebasestorage.app",
+            messagingSenderId: "924132019093",
+            appId: "1:924132019093:web:7663aabf82933eb7e1449c",
+            measurementId: "G-JEGJ3RVPVS"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase(app);
+        const setoresRef = ref(db, 'setores');
+
         let setores = [];
         let currentTab = 'potencia';
         let filtroAtivo = { setor: 'todos', busca: '' };
 
-        function switchTab(tab) {
+        const connectedRef = ref(db, '.info/connected');
+        onValue(connectedRef, (snap) => {
+            const statusEl = document.getElementById('statusConexao');
+            if (snap.val() === true) {
+                statusEl.className = 'mt-3 inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-green-100 text-green-700';
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Conectado ao Firebase';
+            } else {
+                statusEl.className = 'mt-3 inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-red-100 text-red-700';
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Offline';
+            }
+        });
+
+        onValue(setoresRef, (snapshot) => {
+            const data = snapshot.val();
+            setores = data? Object.keys(data).map(key => ({ id: key,...data[key] })) : [];
+            setores.forEach(s => {
+                if (!s.equipamentos) s.equipamentos = [];
+                else if (!Array.isArray(s.equipamentos)) {
+                    s.equipamentos = Object.keys(s.equipamentos).map(k => ({ id: k,...s.equipamentos[k] }));
+                }
+            });
+            atualizarSelectSetores();
+            atualizarFiltroSetores();
+            renderizarSetores();
+            aplicarFiltro();
+        });
+
+        window.switchTab = function(tab) {
             currentTab = tab;
             const tabPotencia = document.getElementById('tabPotencia');
             const tabTensao = document.getElementById('tabTensao');
@@ -275,7 +320,7 @@
             }
         }
 
-        function updateSistema() {
+        window.updateSistema = function() {
             const sistema = document.getElementById('sistema').value;
             const isTrifasico = sistema === 'trifasico';
             document.getElementById('tensaoMono').classList.toggle('hidden', isTrifasico);
@@ -314,7 +359,7 @@
             return potencia;
         }
 
-        function adicionarSetor() {
+        window.adicionarSetor = async function() {
             const nome = document.getElementById('nomeSetor').value.trim();
             if (!nome) {
                 alert('Digite um nome para o setor');
@@ -324,11 +369,9 @@
                 alert('Já existe um setor com esse nome');
                 return;
             }
-            setores.push({ id: Date.now(), nome: nome, equipamentos: [] });
+            const novoSetorRef = push(setoresRef);
+            await set(novoSetorRef, { nome: nome, equipamentos: {} });
             document.getElementById('nomeSetor').value = '';
-            atualizarSelectSetores();
-            atualizarFiltroSetores();
-            renderizarSetores();
         }
 
         function atualizarSelectSetores() {
@@ -388,13 +431,11 @@
             return true;
         }
 
-        document.getElementById('calcForm').addEventListener('submit', function(e) {
+        document.getElementById('calcForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (!validarEquipamento()) return;
 
-            const setorId = parseInt(document.getElementById('setorSelecionado').value);
-            const setor = setores.find(s => s.id === setorId);
-
+            const setorId = document.getElementById('setorSelecionado').value;
             let potencia;
             if (currentTab === 'potencia') {
                 potencia = parseFloat(document.getElementById('potencia').value);
@@ -407,42 +448,35 @@
             const consumoDiario = (potencia * horasDia) / 1000;
             const consumoMensal = (potencia * horasDia * diasMes) / 1000;
 
-            setor.equipamentos.push({
-                id: Date.now(),
+            const novoEquip = {
                 nome: document.getElementById('nomeEquip').value.trim(),
                 potencia: potencia,
                 horasDia: horasDia,
                 diasMes: diasMes,
                 consumoDiario: consumoDiario,
                 consumoMensal: consumoMensal
-            });
+            };
+
+            const equipRef = push(ref(db, `setores/${setorId}/equipamentos`));
+            await set(equipRef, novoEquip);
 
             document.getElementById('calcForm').reset();
             document.getElementById('diasMes').value = '30';
             document.getElementById('fp').value = '0.92';
             document.getElementById('fpValue').textContent = '0.92';
-            renderizarSetores();
-            aplicarFiltro();
         });
 
-        function removerEquipamento(setorId, equipId) {
-            const setor = setores.find(s => s.id === setorId);
-            setor.equipamentos = setor.equipamentos.filter(e => e.id!== equipId);
-            renderizarSetores();
-            aplicarFiltro();
+        window.removerEquipamento = async function(setorId, equipId) {
+            await remove(ref(db, `setores/${setorId}/equipamentos/${equipId}`));
         }
 
-        function removerSetor(setorId) {
+        window.removerSetor = async function(setorId) {
             if (confirm('Remover este setor e todos os equipamentos?')) {
-                setores = setores.filter(s => s.id!== setorId);
-                atualizarSelectSetores();
-                atualizarFiltroSetores();
-                renderizarSetores();
-                aplicarFiltro();
+                await remove(ref(db, `setores/${setorId}`));
             }
         }
 
-        function aplicarFiltro() {
+        window.aplicarFiltro = function() {
             filtroAtivo.setor = document.getElementById('filtroSetor').value;
             filtroAtivo.busca = document.getElementById('buscaEquip').value.toLowerCase().trim();
             renderizarSetores();
@@ -450,18 +484,15 @@
         }
 
         function filtrarEquipamentos(setor) {
-            let equipFiltrados = setor.equipamentos;
-
+            let equipFiltrados = setor.equipamentos || [];
             if (filtroAtivo.setor!== 'todos' && setor.id!= filtroAtivo.setor) {
                 return [];
             }
-
             if (filtroAtivo.busca) {
                 equipFiltrados = equipFiltrados.filter(eq =>
                     eq.nome.toLowerCase().includes(filtroAtivo.busca)
                 );
             }
-
             return equipFiltrados;
         }
 
@@ -481,7 +512,6 @@
             container.innerHTML = setores.map(setor => {
                 const equipFiltrados = filtrarEquipamentos(setor);
                 if (equipFiltrados.length === 0 && (filtroAtivo.setor!== 'todos' || filtroAtivo.busca)) return '';
-
                 totalEquipFiltrados += equipFiltrados.length;
 
                 return `
@@ -496,7 +526,7 @@
                                     ${equipFiltrados.length} equipamento(s)
                                 </p>
                             </div>
-                            <button onclick="removerSetor(${setor.id})" class="text-red-500 hover:text-red-700 p-2">
+                            <button onclick="removerSetor('${setor.id}')" class="text-red-500 hover:text-red-700 p-2">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
@@ -514,7 +544,7 @@
                                             <p class="font-semibold text-indigo-600">${formatarKwh(eq.consumoMensal)} kWh</p>
                                             <p class="text-xs text-slate-500">${formatarKwh(eq.consumoDiario)} kWh/dia</p>
                                         </div>
-                                        <button onclick="removerEquipamento(${setor.id}, ${eq.id})" class="text-slate-400 hover:text-red-600 p-2">
+                                        <button onclick="removerEquipamento('${setor.id}', '${eq.id}')" class="text-slate-400 hover:text-red-600 p-2">
                                             <i class="fa-solid fa-xmark"></i>
                                         </button>
                                     </div>
@@ -532,7 +562,6 @@
                         <p>Nenhum resultado encontrado</p>
                     </div>`;
             }
-
             document.getElementById('contadorRegistros').textContent = totalEquipFiltrados > 0? `(${totalEquipFiltrados} encontrados)` : '';
         }
 
@@ -562,13 +591,9 @@
             document.getElementById('totalAnual').textContent = formatarKwh(totalMensal * 12);
         }
 
-        function limparTudo() {
+        window.limparTudo = async function() {
             if (confirm('Limpar todos os setores e equipamentos?')) {
-                setores = [];
-                atualizarSelectSetores();
-                atualizarFiltroSetores();
-                renderizarSetores();
-                aplicarFiltro();
+                await set(setoresRef, null);
             }
         }
     </script>
