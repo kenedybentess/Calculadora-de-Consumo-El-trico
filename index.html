@@ -6,17 +6,16 @@
 <title>Gestão de Consumo por Setor - Firebase</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     * { font-family: 'Inter', sans-serif; }
-   .input-group:focus-within label { color: #4f46e5; }
-   .result-card { transition: all 0.3s ease; }
-   .result-card:hover { transform: translateY(-2px); }
+.input-group:focus-within label { color: #4f46e5; }
+.result-card { transition: all 0.3s ease; }
+.result-card:hover { transform: translateY(-2px); }
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
-   .tab-active { background: #4f46e5; color: white; }
+.tab-active { background: #4f46e5; color: white; }
 </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen">
@@ -52,7 +51,7 @@
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
                     <h2 class="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
                         <i class="fa-solid fa-plug-circle-plus text-indigo-600"></i>
-                        <span id="tituloForm">Novo Equipamento</span>
+                        Novo Equipamento
                     </h2>
 
                     <div class="input-group mb-4">
@@ -123,6 +122,7 @@
                                         <label class="text-xs text-slate-600 mb-1 block">Fase T</label>
                                         <input type="number" id="tensaoT" step="0.1" min="0" placeholder="220" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
                                     </div>
+                                </div>
                                 <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3 text-center">
                                     <p class="text-xs text-indigo-700">Tensão Média</p>
                                     <p class="text-xl font-bold text-indigo-600"><span id="tensaoMedia">0</span> V</p>
@@ -168,23 +168,10 @@
                             </div>
                         </div>
 
-                        <div class="flex gap-2">
-                            <button type="submit" id="btnSubmit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
-                                <i class="fa-solid fa-plus mr-2"></i>Adicionar Equipamento
-                            </button>
-                            <button type="button" id="btnCancelar" onclick="cancelarEdicao()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3.5 px-6 rounded-xl transition-all">
-                                Cancelar
-                            </button>
-                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
+                            <i class="fa-solid fa-plus mr-2"></i>Adicionar Equipamento
+                        </button>
                     </form>
-                </div>
-
-                <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
-                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-pie text-indigo-600"></i>
-                        Consumo por Setor
-                    </h2>
-                    <canvas id="graficoSetores" class="max-h-64"></canvas>
                 </div>
             </div>
 
@@ -263,7 +250,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase, ref, set, push, onValue, remove, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getDatabase, ref, set, push, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDPbv52pQFVfsPpTXpErgkj9Q4QMemuI0Y",
@@ -283,8 +270,6 @@
         let setores = [];
         let currentTab = 'potencia';
         let filtroAtivo = { setor: 'todos', busca: '' };
-        let editando = null;
-        let chartSetores = null;
 
         const connectedRef = ref(db, '.info/connected');
         onValue(connectedRef, (snap) => {
@@ -311,7 +296,6 @@
             atualizarFiltroSetores();
             renderizarSetores();
             aplicarFiltro();
-            atualizarGrafico();
         });
 
         window.switchTab = function(tab) {
@@ -473,30 +457,11 @@
                 horasDia: horasDia,
                 diasMes: diasMes,
                 consumoDiario: consumoDiario,
-                consumoMensal: consumoMensal,
-                modo: currentTab
+                consumoMensal: consumoMensal
             };
 
-            if (currentTab === 'tensao') {
-                novoEquip.sistema = document.getElementById('sistema').value;
-                novoEquip.corrente = parseFloat(document.getElementById('corrente').value);
-                novoEquip.fp = parseFloat(document.getElementById('fp').value);
-                if (novoEquip.sistema === 'monofasico') {
-                    novoEquip.tensao = parseFloat(document.getElementById('tensao').value);
-                } else {
-                    novoEquip.tensaoR = parseFloat(document.getElementById('tensaoR').value);
-                    novoEquip.tensaoS = parseFloat(document.getElementById('tensaoS').value);
-                    novoEquip.tensaoT = parseFloat(document.getElementById('tensaoT').value);
-                }
-            }
-
-            if (editando) {
-                await update(ref(db, `setores/${editando.setorId}/equipamentos/${editando.equipId}`), novoEquip);
-                cancelarEdicao();
-            } else {
-                const equipRef = push(ref(db, `setores/${setorId}/equipamentos`));
-                await set(equipRef, novoEquip);
-            }
+            const equipRef = push(ref(db, `setores/${setorId}/equipamentos`));
+            await set(equipRef, novoEquip);
 
             document.getElementById('calcForm').reset();
             document.getElementById('diasMes').value = '30';
@@ -504,58 +469,8 @@
             document.getElementById('fpValue').textContent = '0.92';
         });
 
-        window.editarEquipamento = function(setorId, equipId) {
-            const setor = setores.find(s => s.id === setorId);
-            const eq = setor.equipamentos.find(e => e.id === equipId);
-            editando = { setorId, equipId };
-
-            document.getElementById('tituloForm').textContent = 'Editando Equipamento';
-            document.getElementById('setorSelecionado').value = setorId;
-            document.getElementById('nomeEquip').value = eq.nome;
-            document.getElementById('horasDia').value = eq.horasDia;
-            document.getElementById('diasMes').value = eq.diasMes;
-
-            if (eq.modo === 'tensao' && eq.sistema) {
-                switchTab('tensao');
-                document.getElementById('sistema').value = eq.sistema;
-                document.getElementById('corrente').value = eq.corrente;
-                document.getElementById('fp').value = eq.fp;
-                document.getElementById('fpValue').textContent = eq.fp.toFixed(2);
-                updateSistema();
-                if (eq.sistema === 'monofasico') {
-                    document.getElementById('tensao').value = eq.tensao;
-                } else {
-                    document.getElementById('tensaoR').value = eq.tensaoR;
-                    document.getElementById('tensaoS').value = eq.tensaoS;
-                    document.getElementById('tensaoT').value = eq.tensaoT;
-                }
-                calcularPotenciaTempo();
-            } else {
-                switchTab('potencia');
-                document.getElementById('potencia').value = eq.potencia;
-            }
-
-            document.getElementById('btnSubmit').innerHTML = '<i class="fa-solid fa-save mr-2"></i>Salvar Alterações';
-            document.getElementById('btnCancelar').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        window.cancelarEdicao = function() {
-            editando = null;
-            document.getElementById('tituloForm').textContent = 'Novo Equipamento';
-            document.getElementById('calcForm').reset();
-            document.getElementById('diasMes').value = '30';
-            document.getElementById('fp').value = '0.92';
-            document.getElementById('fpValue').textContent = '0.92';
-            document.getElementById('btnSubmit').innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Adicionar Equipamento';
-            document.getElementById('btnCancelar').classList.add('hidden');
-            switchTab('potencia');
-        }
-
         window.removerEquipamento = async function(setorId, equipId) {
-            if (confirm('Remover este equipamento?')) {
-                await remove(ref(db, `setores/${setorId}/equipamentos/${equipId}`));
-            }
+            await remove(ref(db, `setores/${setorId}/equipamentos/${equipId}`));
         }
 
         window.removerSetor = async function(setorId) {
@@ -632,4 +547,92 @@
                                             <p class="font-semibold text-indigo-600">${formatarKwh(eq.consumoMensal)} kWh</p>
                                             <p class="text-xs text-slate-500">${formatarKwh(eq.consumoDiario)} kWh/dia</p>
                                         </div>
-                                        <div
+                                        <button onclick="removerEquipamento('${setor.id}', '${eq.id}')" class="text-slate-400 hover:text-red-600 p-2">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="px-5 py-6 text-center text-sm text-slate-400">Nenhum equipamento</div>'}
+                    </div>
+                `;
+            }).join('');
+
+            if (!container.innerHTML.trim()) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400">
+                        <i class="fa-solid fa-filter-circle-xmark text-4xl mb-3"></i>
+                        <p>Nenhum resultado encontrado</p>
+                    </div>`;
+            }
+            document.getElementById('contadorRegistros').textContent = totalEquipFiltrados > 0? `(${totalEquipFiltrados} encontrados)` : '';
+        }
+
+        function calcularTotaisFiltrados() {
+            let totalDiario = 0, totalMensal = 0;
+            let titulo = 'Consumo Total Geral';
+
+            setores.forEach(setor => {
+                const equipFiltrados = filtrarEquipamentos(setor);
+                equipFiltrados.forEach(eq => {
+                    totalDiario += eq.consumoDiario;
+                    totalMensal += eq.consumoMensal;
+                });
+            });
+
+            if (filtroAtivo.setor!== 'todos') {
+                const setorNome = setores.find(s => s.id == filtroAtivo.setor)?.nome || '';
+                titulo = `Consumo: ${setorNome}`;
+            }
+            if (filtroAtivo.busca) {
+                titulo += filtroAtivo.setor === 'todos'? ' (Filtrado)' : ' + Busca';
+            }
+
+            document.getElementById('tituloTotal').textContent = titulo;
+            document.getElementById('totalDiario').textContent = formatarKwh(totalDiario);
+            document.getElementById('totalMensal').textContent = formatarKwh(totalMensal);
+            document.getElementById('totalAnual').textContent = formatarKwh(totalMensal * 12);
+        }
+
+        window.exportarCSV = function() {
+            let csv = 'Setor,Equipamento,Potencia_W,Horas_Dia,Dias_Mes,Consumo_Diario_kWh,Consumo_Mensal_kWh\n';
+            let totalEquip = 0;
+
+            setores.forEach(setor => {
+                const equipFiltrados = filtrarEquipamentos(setor);
+                equipFiltrados.forEach(eq => {
+                    csv += `"${setor.nome}","${eq.nome}",${eq.potencia},${eq.horasDia},${eq.diasMes},${eq.consumoDiario.toFixed(2)},${eq.consumoMensal.toFixed(2)}\n`;
+                    totalEquip++;
+                });
+            });
+
+            if (totalEquip === 0) {
+                alert('Nenhum equipamento para exportar. Ajuste os filtros.');
+                return;
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+
+            const dataHoje = new Date().toISOString().slice(0,10);
+            const nomeArquivo = filtroAtivo.setor === 'todos'?
+                `consumo-geral-${dataHoje}.csv` :
+                `consumo-${setores.find(s => s.id == filtroAtivo.setor)?.nome.replace(/\s+/g,'_')}-${dataHoje}.csv`;
+
+            link.setAttribute('download', nomeArquivo);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        window.limparTudo = async function() {
+            if (confirm('Limpar todos os setores e equipamentos?')) {
+                await set(setoresRef, null);
+            }
+        }
+    </script>
+</body>
+</html>
