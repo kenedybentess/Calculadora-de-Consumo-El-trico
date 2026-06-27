@@ -49,10 +49,15 @@
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 md:p-8 border border-slate-100">
-                    <h2 class="text-xl font-semibold text-slate-800 mb-6 flex items-center gap-2">
-                        <i class="fa-solid fa-plug-circle-plus text-indigo-600"></i>
-                        Novo Equipamento
-                    </h2>
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-plug-circle-plus text-indigo-600"></i>
+                            <span id="tituloForm">Novo Equipamento</span>
+                        </h2>
+                        <button id="btnCancelarEdicao" onclick="cancelarEdicao()" class="hidden text-sm text-slate-600 hover:text-slate-800 font-medium px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-all">
+                            <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+                        </button>
+                    </div>
 
                     <div class="input-group mb-4">
                         <label class="block text-sm font-medium text-slate-700 mb-2">Selecionar Setor</label>
@@ -168,7 +173,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
+                        <button type="submit" id="btnSubmit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300">
                             <i class="fa-solid fa-plus mr-2"></i>Adicionar Equipamento
                         </button>
                     </form>
@@ -250,7 +255,7 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase, ref, set, push, onValue, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getDatabase, ref, set, push, onValue, remove, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyDPbv52pQFVfsPpTXpErgkj9Q4QMemuI0Y",
@@ -270,6 +275,7 @@
         let setores = [];
         let currentTab = 'potencia';
         let filtroAtivo = { setor: 'todos', busca: '' };
+        let editando = null; // { setorId, equipId }
 
         const connectedRef = ref(db, '.info/connected');
         onValue(connectedRef, (snap) => {
@@ -434,6 +440,35 @@
             return true;
         }
 
+        window.editarEquipamento = function(setorId, equipId) {
+            const setor = setores.find(s => s.id === setorId);
+            const eq = setor.equipamentos.find(e => e.id === equipId);
+            editando = { setorId, equipId };
+
+            document.getElementById('setorSelecionado').value = setorId;
+            document.getElementById('nomeEquip').value = eq.nome;
+            document.getElementById('potencia').value = eq.potencia;
+            document.getElementById('horasDia').value = eq.horasDia;
+            document.getElementById('diasMes').value = eq.diasMes;
+            switchTab('potencia');
+
+            document.getElementById('tituloForm').textContent = 'Editando Equipamento';
+            document.getElementById('btnSubmit').innerHTML = '<i class="fa-solid fa-save mr-2"></i>Salvar Alterações';
+            document.getElementById('btnCancelarEdicao').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        window.cancelarEdicao = function() {
+            editando = null;
+            document.getElementById('calcForm').reset();
+            document.getElementById('diasMes').value = '30';
+            document.getElementById('fp').value = '0.92';
+            document.getElementById('fpValue').textContent = '0.92';
+            document.getElementById('tituloForm').textContent = 'Novo Equipamento';
+            document.getElementById('btnSubmit').innerHTML = '<i class="fa-solid fa-plus mr-2"></i>Adicionar Equipamento';
+            document.getElementById('btnCancelarEdicao').classList.add('hidden');
+        }
+
         document.getElementById('calcForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             if (!validarEquipamento()) return;
@@ -460,17 +495,23 @@
                 consumoMensal: consumoMensal
             };
 
-            const equipRef = push(ref(db, `setores/${setorId}/equipamentos`));
-            await set(equipRef, novoEquip);
-
-            document.getElementById('calcForm').reset();
-            document.getElementById('diasMes').value = '30';
-            document.getElementById('fp').value = '0.92';
-            document.getElementById('fpValue').textContent = '0.92';
+            if (editando) {
+                await update(ref(db, `setores/${editando.setorId}/equipamentos/${editando.equipId}`), novoEquip);
+                cancelarEdicao();
+            } else {
+                const equipRef = push(ref(db, `setores/${setorId}/equipamentos`));
+                await set(equipRef, novoEquip);
+                document.getElementById('calcForm').reset();
+                document.getElementById('diasMes').value = '30';
+                document.getElementById('fp').value = '0.92';
+                document.getElementById('fpValue').textContent = '0.92';
+            }
         });
 
         window.removerEquipamento = async function(setorId, equipId) {
-            await remove(ref(db, `setores/${setorId}/equipamentos/${equipId}`));
+            if (confirm('Remover este equipamento?')) {
+                await remove(ref(db, `setores/${setorId}/equipamentos/${equipId}`));
+            }
         }
 
         window.removerSetor = async function(setorId) {
@@ -547,9 +588,14 @@
                                             <p class="font-semibold text-indigo-600">${formatarKwh(eq.consumoMensal)} kWh</p>
                                             <p class="text-xs text-slate-500">${formatarKwh(eq.consumoDiario)} kWh/dia</p>
                                         </div>
-                                        <button onclick="removerEquipamento('${setor.id}', '${eq.id}')" class="text-slate-400 hover:text-red-600 p-2">
-                                            <i class="fa-solid fa-xmark"></i>
-                                        </button>
+                                        <div class="flex gap-1">
+                                            <button onclick="editarEquipamento('${setor.id}', '${eq.id}')" class="text-slate-400 hover:text-indigo-600 p-2">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button onclick="removerEquipamento('${setor.id}', '${eq.id}')" class="text-slate-400 hover:text-red-600 p-2">
+                                                <i class="fa-solid fa-xmark"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -579,60 +625,3 @@
                     totalMensal += eq.consumoMensal;
                 });
             });
-
-            if (filtroAtivo.setor!== 'todos') {
-                const setorNome = setores.find(s => s.id == filtroAtivo.setor)?.nome || '';
-                titulo = `Consumo: ${setorNome}`;
-            }
-            if (filtroAtivo.busca) {
-                titulo += filtroAtivo.setor === 'todos'? ' (Filtrado)' : ' + Busca';
-            }
-
-            document.getElementById('tituloTotal').textContent = titulo;
-            document.getElementById('totalDiario').textContent = formatarKwh(totalDiario);
-            document.getElementById('totalMensal').textContent = formatarKwh(totalMensal);
-            document.getElementById('totalAnual').textContent = formatarKwh(totalMensal * 12);
-        }
-
-        window.exportarCSV = function() {
-            let csv = 'Setor,Equipamento,Potencia_W,Horas_Dia,Dias_Mes,Consumo_Diario_kWh,Consumo_Mensal_kWh\n';
-            let totalEquip = 0;
-
-            setores.forEach(setor => {
-                const equipFiltrados = filtrarEquipamentos(setor);
-                equipFiltrados.forEach(eq => {
-                    csv += `"${setor.nome}","${eq.nome}",${eq.potencia},${eq.horasDia},${eq.diasMes},${eq.consumoDiario.toFixed(2)},${eq.consumoMensal.toFixed(2)}\n`;
-                    totalEquip++;
-                });
-            });
-
-            if (totalEquip === 0) {
-                alert('Nenhum equipamento para exportar. Ajuste os filtros.');
-                return;
-            }
-
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-
-            const dataHoje = new Date().toISOString().slice(0,10);
-            const nomeArquivo = filtroAtivo.setor === 'todos'?
-                `consumo-geral-${dataHoje}.csv` :
-                `consumo-${setores.find(s => s.id == filtroAtivo.setor)?.nome.replace(/\s+/g,'_')}-${dataHoje}.csv`;
-
-            link.setAttribute('download', nomeArquivo);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        window.limparTudo = async function() {
-            if (confirm('Limpar todos os setores e equipamentos?')) {
-                await set(setoresRef, null);
-            }
-        }
-    </script>
-</body>
-</html>
