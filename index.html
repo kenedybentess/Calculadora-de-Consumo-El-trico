@@ -283,20 +283,28 @@
             }
         });
 
-        onValue(setoresRef, (snapshot) => {
-            const data = snapshot.val();
-            setores = data? Object.keys(data).map(key => ({ id: key,...data[key] })) : [];
-            setores.forEach(s => {
-                if (!s.equipamentos) s.equipamentos = [];
-                else if (!Array.isArray(s.equipamentos)) {
-                    s.equipamentos = Object.keys(s.equipamentos).map(k => ({ id: k,...s.equipamentos[k] }));
-                }
-            });
-            atualizarSelectSetores();
-            atualizarFiltroSetores();
-            renderizarSetores();
-            aplicarFiltro();
-        });
+       onValue(setoresRef, (snapshot) => {
+    const data = snapshot.val();
+    setores = data? Object.keys(data).map(key => {
+        const setor = { id: key,...data[key] };
+
+        // Converte equipamentos de objeto pra array mantendo os IDs
+        if (!setor.equipamentos) {
+            setor.equipamentos = [];
+        } else if (typeof setor.equipamentos === 'object' &&!Array.isArray(setor.equipamentos)) {
+            setor.equipamentos = Object.keys(setor.equipamentos).map(eqKey => ({
+                id: eqKey,
+               ...setor.equipamentos[eqKey]
+            }));
+        }
+        return setor;
+    }) : [];
+
+    atualizarSelectSetores();
+    atualizarFiltroSetores();
+    renderizarSetores();
+    aplicarFiltro();
+});
 
         window.switchTab = function(tab) {
             currentTab = tab;
