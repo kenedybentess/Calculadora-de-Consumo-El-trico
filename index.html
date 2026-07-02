@@ -94,7 +94,6 @@
                                 <select id="sistema" onchange="updateSistema()"
                                     class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
                                     <option value="monofasico">Monofásico: P = V × I × cos φ</option>
-                                    <option value="bifasico">Bifásico: P = 2 × Vfn × I × cos φ</option>
                                     <option value="trifasico">Trifásico: P = √3 × Vmédia × I × cos φ</option>
                                 </select>
                             </div>
@@ -109,17 +108,17 @@
                             </div>
 
                             <div id="tensaoTri" class="hidden space-y-3">
-                                <label id="labelTensoes" class="block text-sm font-medium text-slate-700">Tensões R-S-T</label>
+                                <label class="block text-sm font-medium text-slate-700">Tensões R-S-T</label>
                                 <div class="grid grid-cols-3 gap-3">
-                                    <div id="divFaseR">
-                                        <label id="labelFaseR" class="text-xs text-slate-600 mb-1 block">Fase R</label>
-                                        <input type="number" id="tensaoR" step="0.1" min="0" placeholder="220" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
+                                    <div>
+                                        <label class="text-xs text-slate-600 mb-1 block">Fase R</label>
+                                        <input type="number" id="tensaoR" step="0.1" min="0" placeholder="220" class="w-full px-3 py-2.5 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
                                     </div>
-                                    <div id="divFaseS">
-                                        <label id="labelFaseS" class="text-xs text-slate-600 mb-1 block">Fase S</label>
+                                    <div>
+                                        <label class="text-xs text-slate-600 mb-1 block">Fase S</label>
                                         <input type="number" id="tensaoS" step="0.1" min="0" placeholder="220" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
                                     </div>
-                                    <div id="divFaseT">
+                                    <div>
                                         <label class="text-xs text-slate-600 mb-1 block">Fase T</label>
                                         <input type="number" id="tensaoT" step="0.1" min="0" placeholder="220" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
                                     </div>
@@ -175,7 +174,8 @@
                     </form>
                 </div>
             </div>
-           <!-- COLUNA 2: LISTA E TOTAIS -->
+
+            <!-- COLUNA 2: LISTA E TOTAIS -->
             <div class="lg:col-span-3 space-y-6">
                 <div class="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-6 border border-slate-100">
                     <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
@@ -283,28 +283,20 @@
             }
         });
 
-       onValue(setoresRef, (snapshot) => {
-    const data = snapshot.val();
-    setores = data? Object.keys(data).map(key => {
-        const setor = { id: key,...data[key] };
-
-        // Converte equipamentos de objeto pra array mantendo os IDs
-        if (!setor.equipamentos) {
-            setor.equipamentos = [];
-        } else if (typeof setor.equipamentos === 'object' &&!Array.isArray(setor.equipamentos)) {
-            setor.equipamentos = Object.keys(setor.equipamentos).map(eqKey => ({
-                id: eqKey,
-               ...setor.equipamentos[eqKey]
-            }));
-        }
-        return setor;
-    }) : [];
-
-    atualizarSelectSetores();
-    atualizarFiltroSetores();
-    renderizarSetores();
-    aplicarFiltro();
-});
+        onValue(setoresRef, (snapshot) => {
+            const data = snapshot.val();
+            setores = data? Object.keys(data).map(key => ({ id: key,...data[key] })) : [];
+            setores.forEach(s => {
+                if (!s.equipamentos) s.equipamentos = [];
+                else if (!Array.isArray(s.equipamentos)) {
+                    s.equipamentos = Object.keys(s.equipamentos).map(k => ({ id: k,...s.equipamentos[k] }));
+                }
+            });
+            atualizarSelectSetores();
+            atualizarFiltroSetores();
+            renderizarSetores();
+            aplicarFiltro();
+        });
 
         window.switchTab = function(tab) {
             currentTab = tab;
@@ -333,33 +325,9 @@
 
         window.updateSistema = function() {
             const sistema = document.getElementById('sistema').value;
-            const tensaoMono = document.getElementById('tensaoMono');
-            const tensaoTri = document.getElementById('tensaoTri');
-            const labelTensoes = document.getElementById('labelTensoes');
-            const divFaseT = document.getElementById('divFaseT');
-            const labelFaseR = document.getElementById('labelFaseR');
-            const labelFaseS = document.getElementById('labelFaseS');
-
-            if (sistema === 'monofasico') {
-                tensaoMono.classList.remove('hidden');
-                tensaoTri.classList.add('hidden');
-            }
-            else if (sistema === 'bifasico') {
-                tensaoMono.classList.add('hidden');
-                tensaoTri.classList.remove('hidden');
-                labelTensoes.textContent = 'Tensões Fase-Neutro';
-                divFaseT.style.display = 'none';
-                labelFaseR.textContent = 'Fase A';
-                labelFaseS.textContent = 'Fase B';
-            }
-            else if (sistema === 'trifasico') {
-                tensaoMono.classList.add('hidden');
-                tensaoTri.classList.remove('hidden');
-                labelTensoes.textContent = 'Tensões R-S-T';
-                divFaseT.style.display = 'block';
-                labelFaseR.textContent = 'Fase R';
-                labelFaseS.textContent = 'Fase S';
-            }
+            const isTrifasico = sistema === 'trifasico';
+            document.getElementById('tensaoMono').classList.toggle('hidden', isTrifasico);
+            document.getElementById('tensaoTri').classList.toggle('hidden',!isTrifasico);
             calcularPotenciaTempo();
         }
 
@@ -382,15 +350,7 @@
             if (sistema === 'monofasico') {
                 const tensao = parseFloat(document.getElementById('tensao').value) || 0;
                 potencia = tensao * corrente * fp;
-            }
-            else if (sistema === 'bifasico') {
-                const a = parseFloat(document.getElementById('tensaoR').value) || 0;
-                const b = parseFloat(document.getElementById('tensaoS').value) || 0;
-                const media = (a + b) / 2;
-                document.getElementById('tensaoMedia').textContent = media.toFixed(1);
-                potencia = 2 * media * corrente * fp;
-            }
-            else if (sistema === 'trifasico') {
+            } else {
                 const r = parseFloat(document.getElementById('tensaoR').value) || 0;
                 const s = parseFloat(document.getElementById('tensaoS').value) || 0;
                 const t = parseFloat(document.getElementById('tensaoT').value) || 0;
@@ -507,8 +467,134 @@
             document.getElementById('diasMes').value = '30';
             document.getElementById('fp').value = '0.92';
             document.getElementById('fpValue').textContent = '0.92';
-        }); 
-         window.exportarCSV = function() {
+        });
+
+        window.removerEquipamento = async function(setorId, equipId) {
+            await remove(ref(db, `setores/${setorId}/equipamentos/${equipId}`));
+        }
+
+        window.removerSetor = async function(setorId) {
+            if (confirm('Remover este setor e todos os equipamentos?')) {
+                await remove(ref(db, `setores/${setorId}`));
+            }
+        }
+
+        window.aplicarFiltro = function() {
+            filtroAtivo.setor = document.getElementById('filtroSetor').value;
+            filtroAtivo.busca = document.getElementById('buscaEquip').value.toLowerCase().trim();
+            renderizarSetores();
+            calcularTotaisFiltrados();
+        }
+
+        function filtrarEquipamentos(setor) {
+            let equipFiltrados = setor.equipamentos || [];
+            if (filtroAtivo.setor!== 'todos' && setor.id!= filtroAtivo.setor) {
+                return [];
+            }
+            if (filtroAtivo.busca) {
+                equipFiltrados = equipFiltrados.filter(eq =>
+                    eq.nome.toLowerCase().includes(filtroAtivo.busca)
+                );
+            }
+            return equipFiltrados;
+        }
+
+        function renderizarSetores() {
+            const container = document.getElementById('listaSetores');
+            if (setores.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400">
+                        <i class="fa-solid fa-inbox text-4xl mb-3"></i>
+                        <p>Nenhum setor cadastrado ainda</p>
+                    </div>`;
+                document.getElementById('contadorRegistros').textContent = '';
+                return;
+            }
+
+            let totalEquipFiltrados = 0;
+            container.innerHTML = setores.map(setor => {
+                const equipFiltrados = filtrarEquipamentos(setor);
+                if (equipFiltrados.length === 0 && (filtroAtivo.setor!== 'todos' || filtroAtivo.busca)) return '';
+                totalEquipFiltrados += equipFiltrados.length;
+
+                return `
+                    <div class="border border-slate-200 rounded-xl overflow-hidden">
+                        <div class="bg-slate-50 px-5 py-4 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                                    <i class="fa-solid fa-folder text-indigo-600"></i>
+                                    ${setor.nome}
+                                </h3>
+                                <p class="text-sm text-slate-600 mt-1">
+                                    ${equipFiltrados.length} equipamento(s)
+                                </p>
+                            </div>
+                            <button onclick="removerSetor('${setor.id}')" class="text-red-500 hover:text-red-700 p-2">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                        ${equipFiltrados.length > 0? `
+                            <div class="divide-y divide-slate-100">
+                                ${equipFiltrados.map(eq => `
+                                    <div class="px-5 py-3 flex items-center justify-between hover:bg-slate-50">
+                                        <div class="flex-1">
+                                            <p class="font-medium text-slate-800">${eq.nome}</p>
+                                            <p class="text-xs text-slate-500">
+                                                ${eq.potencia.toFixed(0)}W • ${eq.horasDia}h/dia • ${eq.diasMes} dias
+                                            </p>
+                                        </div>
+                                        <div class="text-right mr-4">
+                                            <p class="font-semibold text-indigo-600">${formatarKwh(eq.consumoMensal)} kWh</p>
+                                            <p class="text-xs text-slate-500">${formatarKwh(eq.consumoDiario)} kWh/dia</p>
+                                        </div>
+                                        <button onclick="removerEquipamento('${setor.id}', '${eq.id}')" class="text-slate-400 hover:text-red-600 p-2">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="px-5 py-6 text-center text-sm text-slate-400">Nenhum equipamento</div>'}
+                    </div>
+                `;
+            }).join('');
+
+            if (!container.innerHTML.trim()) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400">
+                        <i class="fa-solid fa-filter-circle-xmark text-4xl mb-3"></i>
+                        <p>Nenhum resultado encontrado</p>
+                    </div>`;
+            }
+            document.getElementById('contadorRegistros').textContent = totalEquipFiltrados > 0? `(${totalEquipFiltrados} encontrados)` : '';
+        }
+
+        function calcularTotaisFiltrados() {
+            let totalDiario = 0, totalMensal = 0;
+            let titulo = 'Consumo Total Geral';
+
+            setores.forEach(setor => {
+                const equipFiltrados = filtrarEquipamentos(setor);
+                equipFiltrados.forEach(eq => {
+                    totalDiario += eq.consumoDiario;
+                    totalMensal += eq.consumoMensal;
+                });
+            });
+
+            if (filtroAtivo.setor!== 'todos') {
+                const setorNome = setores.find(s => s.id == filtroAtivo.setor)?.nome || '';
+                titulo = `Consumo: ${setorNome}`;
+            }
+            if (filtroAtivo.busca) {
+                titulo += filtroAtivo.setor === 'todos'? ' (Filtrado)' : ' + Busca';
+            }
+
+            document.getElementById('tituloTotal').textContent = titulo;
+            document.getElementById('totalDiario').textContent = formatarKwh(totalDiario);
+            document.getElementById('totalMensal').textContent = formatarKwh(totalMensal);
+            document.getElementById('totalAnual').textContent = formatarKwh(totalMensal * 12);
+        }
+
+        window.exportarCSV = function() {
             let csv = 'Setor,Equipamento,Potencia_W,Horas_Dia,Dias_Mes,Consumo_Diario_kWh,Consumo_Mensal_kWh\n';
             let totalEquip = 0;
 
